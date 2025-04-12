@@ -1,0 +1,220 @@
+-- UNDTC Prison Life GUI | Safe UI + Rainbow ESP + Teleportation + Chams + Aimbot + Fly + Speed Hack + Box Outline ESP + Noclip + Server Member List + Flinging + GUI Customization | By ovtszn
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+local humanoid = Character:WaitForChild("Humanoid")
+
+-- == UI SETUP ==
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "PrisonLifeUndetectableUI"
+ScreenGui.Parent = PlayerGui
+
+local Main = Instance.new("Frame")
+Main.Size = UDim2.new(0, 220, 0, 260)
+Main.Position = UDim2.new(0, 40, 0, 250)
+Main.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+Main.BorderSizePixel = 0
+Main.Parent = ScreenGui
+Main.Active = true
+Main.Draggable = true
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Text = "ovtszn Prison Life"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+Title.Parent = Main
+
+local yOffset = 35
+local uiVisible = true  -- Default state is visible
+
+-- Function to toggle the visibility of the UI
+local function toggleUI()
+    uiVisible = not uiVisible
+    Main.Visible = uiVisible
+end
+
+-- Create sections
+local sections = {}
+local currentSection = nil
+
+local function CreateSection(name)
+    local section = Instance.new("Frame")
+    section.Size = UDim2.new(1, 0, 1, -35)
+    section.Position = UDim2.new(0, 0, 0, 35)
+    section.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    section.Visible = false
+    section.Parent = Main
+    sections[name] = section
+    return section
+end
+
+local function AddButtonToSection(text, section, callback)
+    local Button = Instance.new("TextButton")
+    Button.Size = UDim2.new(1, -20, 0, 30)
+    Button.Position = UDim2.new(0, 10, 0, yOffset)
+    Button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    Button.TextColor3 = Color3.new(1, 1, 1)
+    Button.Text = text
+    Button.Parent = section
+    Button.MouseButton1Click:Connect(callback)
+    yOffset += 35
+end
+
+-- == FEATURES ==
+
+-- Rainbow ESP
+local function EnableRainbowESP()
+    local function addESP(plr)
+        if plr == LocalPlayer then return end
+        if not plr.Character or not plr.Character:FindFirstChild("Head") then return end
+
+        local bb = Instance.new("BillboardGui", plr.Character.Head)
+        bb.Name = "PL_ESP"
+        bb.Adornee = plr.Character.Head
+        bb.Size = UDim2.new(0, 100, 0, 30)
+        bb.AlwaysOnTop = true
+
+        local label = Instance.new("TextLabel", bb)
+        label.Size = UDim2.new(1, 0, 1, 0)
+        label.BackgroundTransparency = 1
+        label.Text = plr.Name
+        label.TextStrokeTransparency = 0.5
+        label.TextColor3 = Color3.new(1, 1, 1)
+
+        RunService.RenderStepped:Connect(function()
+            label.TextColor3 = Color3.fromHSV((tick() % 5) / 5, 1, 1)
+        end)
+    end
+
+    for _, p in pairs(Players:GetPlayers()) do
+        addESP(p)
+    end
+
+    Players.PlayerAdded:Connect(addESP)
+end
+
+-- Teleportation function
+local function teleportTo(pos)
+    if not Character or not HumanoidRootPart then return end
+    HumanoidRootPart.CFrame = CFrame.new(pos)
+end
+
+-- Aimbot
+local function enableAimbot()
+    local function getClosestPlayer()
+        local closestPlayer = nil
+        local shortestDistance = math.huge
+
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr == LocalPlayer or not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then
+                continue
+            end
+
+            local dist = (HumanoidRootPart.Position - plr.Character.HumanoidRootPart.Position).Magnitude
+            if dist < shortestDistance then
+                closestPlayer = plr
+                shortestDistance = dist
+            end
+        end
+
+        return closestPlayer
+    end
+
+    RunService.RenderStepped:Connect(function()
+        local closestPlayer = getClosestPlayer()
+        if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("Head") then
+            HumanoidRootPart.CFrame = CFrame.new(closestPlayer.Character.Head.Position)
+        end)
+    end)
+end
+
+-- Fly
+local flying = false
+local bodyVelocity = Instance.new("BodyVelocity")
+local bodyGyro = Instance.new("BodyGyro")
+
+local function toggleFly()
+    if not Character or not HumanoidRootPart then return end
+
+    if flying then
+        bodyVelocity:Destroy()
+        bodyGyro:Destroy()
+        flying = false
+    else
+        -- Create BodyVelocity and BodyGyro objects for flying
+        bodyVelocity.MaxForce = Vector3.new(400000, 400000, 400000)
+        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+        bodyVelocity.Parent = HumanoidRootPart
+
+        bodyGyro.MaxTorque = Vector3.new(400000, 400000, 400000)
+        bodyGyro.CFrame = HumanoidRootPart.CFrame
+        bodyGyro.Parent = HumanoidRootPart
+
+        -- Adjust the BodyVelocity for smooth movement
+        local moveDirection = Vector3.new(0, 0, 0)
+
+        -- Fly movement controls (WASD keys for movement)
+        UserInputService.InputBegan:Connect(function(input, gameProcessed)
+            if gameProcessed then return end
+            if input.KeyCode == Enum.KeyCode.W then
+                moveDirection = Vector3.new(0, 0, -50)
+            elseif input.KeyCode == Enum.KeyCode.S then
+                moveDirection = Vector3.new(0, 0, 50)
+            elseif input.KeyCode == Enum.KeyCode.A then
+                moveDirection = Vector3.new(-50, 0, 0)
+            elseif input.KeyCode == Enum.KeyCode.D then
+                moveDirection = Vector3.new(50, 0, 0)
+            elseif input.KeyCode == Enum.KeyCode.Space then
+                moveDirection = Vector3.new(0, 50, 0)
+            elseif input.KeyCode == Enum.KeyCode.LeftShift then
+                moveDirection = Vector3.new(0, -50, 0)
+            end
+
+            bodyVelocity.Velocity = moveDirection
+        end)
+
+        flying = true
+    end
+end
+
+-- Speed Hack
+local function setSpeed(speed)
+    humanoid.WalkSpeed = speed
+end
+
+-- == BUTTONS ==
+
+-- Add button to give gun items (example: giving yourself a gun)
+local function giveGun()
+    -- Example of giving a basic gun tool (replace with actual tool object from the game)
+    local gun = game.ServerStorage:FindFirstChild("GunTool") -- Adjust this path to your game’s gun tool
+    if gun then
+        local clonedGun = gun:Clone()
+        clonedGun.Parent = LocalPlayer.Backpack
+    else
+        warn("Gun tool not found in ServerStorage")
+    end
+end
+
+-- Create the UI Section for item/gun giving
+local gunSection = CreateSection("Guns")
+AddButtonToSection("Give Gun", gunSection, giveGun)
+
+-- Main UI Buttons
+local uiSection = CreateSection("UI")
+AddButtonToSection("Enable Rainbow ESP", uiSection, EnableRainbowESP)
+AddButtonToSection("Teleport to Yard", uiSection, function() teleportTo(Vector3.new(791, 98, 2266)) end)
+AddButtonToSection("Teleport to Guard Room", uiSection, function() teleportTo(Vector3.new(838, 99, 2274)) end)
+AddButtonToSection("Teleport to Criminal Base", uiSection, function() teleportTo(Vector3.new(-943, 94, 2056)) end)
+
+local miscSection = CreateSection("Misc")
+AddButtonToSection("Enable Aimbot", miscSection, enableAimbot)
+AddButtonToSection("Toggle Fly", miscSection, toggleFly)
+
+-- UI Toggle Button (toggle UI visibility)
+local toggleButtonSection = CreateSection("
