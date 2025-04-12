@@ -1,0 +1,374 @@
+-- UNDTC Prison Life GUI | By ovtszn
+-- Features: Rainbow ESP, Teleportation, Aimbot, Fly, Speed Hack, Box Outline ESP, Noclip,
+--           Server Member List & Teleport, Flinging, GUI Customization, Gun Give, UI Toggle
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+local humanoid = Character:WaitForChild("Humanoid")
+
+-- == UI SETUP ==
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "PrisonLifeUndetectableUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+local Main = Instance.new("Frame")
+Main.Size = UDim2.new(0, 220, 0, 260)
+Main.Position = UDim2.new(0, 40, 0, 250)
+Main.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+Main.BorderSizePixel = 0
+Main.Active = true
+Main.Draggable = true
+Main.Parent = ScreenGui
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Text = "ovtszn Prison Life"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+Title.Parent = Main
+
+local uiVisible = true  -- UI starts visible
+
+local function toggleUI()
+	uiVisible = not uiVisible
+	Main.Visible = uiVisible
+end
+
+-- == Section Management ==
+local sections = {}
+local currentSection = nil
+
+-- Each section will store its own yOffset for button placement
+local function CreateSection(name)
+	local section = Instance.new("Frame")
+	section.Size = UDim2.new(1, 0, 1, -35)
+	section.Position = UDim2.new(0, 0, 0, 35)
+	section.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+	section.Visible = false
+	section.Parent = Main
+	section.yOffset = 5  -- start offset for buttons within the section
+	sections[name] = section
+	return section
+end
+
+local function AddButtonToSection(text, section, callback)
+	local Button = Instance.new("TextButton")
+	Button.Size = UDim2.new(1, -20, 0, 30)
+	Button.Position = UDim2.new(0, 10, 0, section.yOffset)
+	section.yOffset = section.yOffset + 35
+	Button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	Button.TextColor3 = Color3.new(1, 1, 1)
+	Button.Text = text
+	Button.Parent = section
+	Button.MouseButton1Click:Connect(callback)
+end
+
+-- Creates tab buttons to switch sections (placed on the Main frame above sections)
+local tabButtons = {}
+local tabYOffset = 5
+local function AddTabButton(text, section)
+	local tab = Instance.new("TextButton")
+	tab.Size = UDim2.new(0, 80, 0, 25)
+	tab.Position = UDim2.new(0, 10 + (#tabButtons * 85), 0, 35 - 30)
+	tab.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	tab.TextColor3 = Color3.new(1, 1, 1)
+	tab.Text = text
+	tab.Parent = Main
+	tab.MouseButton1Click:Connect(function()
+		-- Hide current section and show the selected one
+		if currentSection then
+			currentSection.Visible = false
+		end
+		section.Visible = true
+		currentSection = section
+	end)
+	table.insert(tabButtons, tab)
+end
+
+-- == FEATURES ==
+
+-- Rainbow ESP
+local function EnableRainbowESP()
+	local function addESP(plr)
+		if plr == LocalPlayer then return end
+		if not plr.Character or not plr.Character:FindFirstChild("Head") then return end
+
+		local bb = Instance.new("BillboardGui", plr.Character.Head)
+		bb.Name = "PL_ESP"
+		bb.Adornee = plr.Character.Head
+		bb.Size = UDim2.new(0, 100, 0, 30)
+		bb.AlwaysOnTop = true
+
+		local label = Instance.new("TextLabel", bb)
+		label.Size = UDim2.new(1, 0, 1, 0)
+		label.BackgroundTransparency = 1
+		label.Text = plr.Name
+		label.TextStrokeTransparency = 0.5
+		label.TextColor3 = Color3.new(1, 1, 1)
+
+		RunService.RenderStepped:Connect(function()
+			label.TextColor3 = Color3.fromHSV((tick() % 5) / 5, 1, 1)
+		end)
+	end
+
+	for _, p in pairs(Players:GetPlayers()) do
+		addESP(p)
+	end
+
+	Players.PlayerAdded:Connect(addESP)
+end
+
+-- Teleportation function
+local function teleportTo(pos)
+	if not Character or not HumanoidRootPart then return end
+	HumanoidRootPart.CFrame = CFrame.new(pos)
+end
+
+-- Aimbot
+local function enableAimbot()
+	local function getClosestPlayer()
+		local closestPlayer = nil
+		local shortestDistance = math.huge
+
+		for _, plr in pairs(Players:GetPlayers()) do
+			if plr == LocalPlayer or not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then
+				continue
+			end
+
+			local dist = (HumanoidRootPart.Position - plr.Character.HumanoidRootPart.Position).Magnitude
+			if dist < shortestDistance then
+				closestPlayer = plr
+				shortestDistance = dist
+			end
+		end
+
+		return closestPlayer
+	end
+
+	RunService.RenderStepped:Connect(function()
+		local closestPlayer = getClosestPlayer()
+		if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("Head") then
+			HumanoidRootPart.CFrame = CFrame.new(closestPlayer.Character.Head.Position)
+		end
+	end)
+end
+
+-- Fly (fixed): Establishes flight controls only once while flying is active.
+local flying = false
+local flyBodyVelocity, flyBodyGyro
+local flyConn
+
+local function toggleFly()
+	if not Character or not HumanoidRootPart then return end
+
+	if flying then
+		if flyConn then
+			flyConn:Disconnect()
+			flyConn = nil
+		end
+		if flyBodyVelocity then flyBodyVelocity:Destroy() end
+		if flyBodyGyro then flyBodyGyro:Destroy() end
+		flying = false
+	else
+		flyBodyVelocity = Instance.new("BodyVelocity", HumanoidRootPart)
+		flyBodyVelocity.MaxForce = Vector3.new(400000, 400000, 400000)
+		flyBodyVelocity.Velocity = Vector3.new(0, 0, 0)
+
+		flyBodyGyro = Instance.new("BodyGyro", HumanoidRootPart)
+		flyBodyGyro.MaxTorque = Vector3.new(400000, 400000, 400000)
+		flyBodyGyro.CFrame = HumanoidRootPart.CFrame
+
+		-- Create one connection for input while flying is active.
+		flyConn = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+			if gameProcessed then return end
+			local dir = Vector3.new(0, 0, 0)
+			if input.KeyCode == Enum.KeyCode.W then
+				dir = dir + Vector3.new(0, 0, -50)
+			elseif input.KeyCode == Enum.KeyCode.S then
+				dir = dir + Vector3.new(0, 0, 50)
+			elseif input.KeyCode == Enum.KeyCode.A then
+				dir = dir + Vector3.new(-50, 0, 0)
+			elseif input.KeyCode == Enum.KeyCode.D then
+				dir = dir + Vector3.new(50, 0, 0)
+			elseif input.KeyCode == Enum.KeyCode.Space then
+				dir = dir + Vector3.new(0, 50, 0)
+			elseif input.KeyCode == Enum.KeyCode.LeftShift then
+				dir = dir + Vector3.new(0, -50, 0)
+			end
+			flyBodyVelocity.Velocity = dir
+		end)
+		flying = true
+	end
+end
+
+-- Speed Hack
+local function setSpeed(speed)
+	humanoid.WalkSpeed = speed
+end
+
+-- Box Outline ESP
+local function enableBoxOutlineESP()
+	local function addBoxOutline(plr)
+		if plr == LocalPlayer then return end
+		if not plr.Character or not plr.Character:FindFirstChild("Head") then return end
+
+		local box = Instance.new("Frame")
+		box.Size = UDim2.new(1, 0, 1, 0)
+		box.Position = UDim2.new(0, 0, 0, 0)
+		box.BorderColor3 = Color3.fromRGB(255, 0, 0) -- Red box
+		box.BorderSizePixel = 3
+		box.Parent = plr.Character
+	end
+
+	for _, p in pairs(Players:GetPlayers()) do
+		addBoxOutline(p)
+	end
+
+	Players.PlayerAdded:Connect(addBoxOutline)
+end
+
+-- Noclip
+local noclip = false
+local function toggleNoclip()
+	noclip = not noclip
+	local character = LocalPlayer.Character
+	if not character then return end
+	local hrp = character:FindFirstChild("HumanoidRootPart")
+	if not hrp then return end
+
+	local function noclipLoop()
+		while noclip do
+			if character and character:FindFirstChild("HumanoidRootPart") then
+				character.HumanoidRootPart.CanCollide = false
+			end
+			wait(0.1)
+		end
+		if character and character:FindFirstChild("HumanoidRootPart") then
+			character.HumanoidRootPart.CanCollide = true
+		end
+	end
+
+	if noclip then
+		coroutine.wrap(noclipLoop)()
+	end
+end
+
+-- Fling
+local function flingPlayer(plr)
+	if plr == LocalPlayer then return end
+	local character = plr.Character
+	if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+
+	local force = Instance.new("BodyVelocity")
+	force.MaxForce = Vector3.new(500000, 500000, 500000)
+	force.Velocity = Vector3.new(math.random(-500,500), math.random(500,1000), math.random(-500,500))
+	force.Parent = character.HumanoidRootPart
+	wait(0.1)
+	force:Destroy()
+end
+
+-- Server Member List & Teleport
+local function listServerMembers()
+	local list = ""
+	for _, plr in pairs(Players:GetPlayers()) do
+		list = list .. plr.Name .. "\n"
+	end
+	return list
+end
+
+local function teleportToPlayer(plr)
+	if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+		teleportTo(plr.Character.HumanoidRootPart.Position)
+	end
+end
+
+-- Gun Give Feature
+local function giveGun()
+	local gun = game.ServerStorage:FindFirstChild("GunTool")
+	if gun then
+		local clonedGun = gun:Clone()
+		clonedGun.Parent = LocalPlayer.Backpack
+	else
+		warn("Gun tool not found in ServerStorage")
+	end
+end
+
+-- == CREATE SECTIONS ==
+local uiSection = CreateSection("UI")
+local miscSection = CreateSection("Misc")
+local gunSection = CreateSection("Guns")
+local memberSection = CreateSection("Server Members")
+local flingSection = CreateSection("Fling")
+local colorSection = CreateSection("Color Customization")
+local toggleSection = CreateSection("UI Toggle")
+
+-- == ADD TAB BUTTONS ==
+AddTabButton("UI", uiSection)
+AddTabButton("Misc", miscSection)
+AddTabButton("Guns", gunSection)
+AddTabButton("Members", memberSection)
+AddTabButton("Fling", flingSection)
+AddTabButton("Colors", colorSection)
+AddTabButton("Toggle", toggleSection)
+-- Show UI section by default
+currentSection = uiSection
+uiSection.Visible = true
+
+-- == ADD BUTTONS TO SECTIONS ==
+-- UI Section
+AddButtonToSection("Enable Rainbow ESP", uiSection, EnableRainbowESP)
+AddButtonToSection("Teleport to Yard", uiSection, function() teleportTo(Vector3.new(791,98,2266)) end)
+AddButtonToSection("Teleport to Guard Room", uiSection, function() teleportTo(Vector3.new(838,99,2274)) end)
+AddButtonToSection("Teleport to Criminal Base", uiSection, function() teleportTo(Vector3.new(-943,94,2056)) end)
+
+-- Misc Section
+AddButtonToSection("Enable Aimbot", miscSection, enableAimbot)
+AddButtonToSection("Toggle Fly", miscSection, toggleFly)
+AddButtonToSection("Toggle Noclip", miscSection, toggleNoclip)
+AddButtonToSection("Set WalkSpeed to 50", miscSection, function() setSpeed(50) end)
+
+-- Guns Section
+AddButtonToSection("Give Gun", gunSection, giveGun)
+
+-- Server Members Section
+AddButtonToSection("List Members (Output to Console)", memberSection, function()
+	print(listServerMembers())
+end)
+AddButtonToSection("Teleport to Yourself", memberSection, function()
+	teleportToPlayer(LocalPlayer)
+end)
+-- For each existing player, add a teleport button
+for _, plr in pairs(Players:GetPlayers()) do
+	if plr ~= LocalPlayer then
+		AddButtonToSection("Teleport to " .. plr.Name, memberSection, function()
+			teleportToPlayer(plr)
+		end)
+	end
+end
+
+-- Fling Section
+AddButtonToSection("Fling Random Player", flingSection, function()
+	local players = Players:GetPlayers()
+	if #players > 1 then
+		local randomPlayer = players[math.random(1, #players)]
+		if randomPlayer ~= LocalPlayer then
+			flingPlayer(randomPlayer)
+		end
+	end
+end)
+
+-- Color Customization Section
+AddButtonToSection("Change Main Background", colorSection, function()
+	Main.BackgroundColor3 = Color3.fromRGB(math.random(0,255), math.random(0,255), math.random(0,255))
+end)
+
+-- Toggle Section (UI Toggle)
+AddButtonToSection("Toggle UI Visibility", toggleSection, toggleUI)
+
+-- End of Script
