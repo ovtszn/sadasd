@@ -1,0 +1,144 @@
+-- UNDTC Prison Life GUI | Safe UI + Rainbow ESP + Teleportation + Chams + Aimbot + Fly | By ovtszn
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+
+-- == UI SETUP == 
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "PrisonLifeUndetectableUI"
+ScreenGui.Parent = PlayerGui
+
+local Main = Instance.new("Frame")
+Main.Size = UDim2.new(0, 220, 0, 260)
+Main.Position = UDim2.new(0, 40, 0, 250)
+Main.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+Main.BorderSizePixel = 0
+Main.Parent = ScreenGui
+Main.Active = true
+Main.Draggable = true
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Text = "PL Undetectable UI"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+Title.Parent = Main
+
+local yOffset = 35
+local function AddButton(text, callback)
+    local Button = Instance.new("TextButton")
+    Button.Size = UDim2.new(1, -20, 0, 30)
+    Button.Position = UDim2.new(0, 10, 0, yOffset)
+    Button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    Button.TextColor3 = Color3.new(1, 1, 1)
+    Button.Text = text
+    Button.Parent = Main
+    Button.MouseButton1Click:Connect(callback)
+    yOffset += 35
+end
+
+-- == FEATURES ==
+
+-- Rainbow ESP
+local function EnableRainbowESP()
+    local function addESP(plr)
+        if plr == LocalPlayer then return end
+        if not plr.Character or not plr.Character:FindFirstChild("Head") then return end
+
+        local bb = Instance.new("BillboardGui", plr.Character.Head)
+        bb.Name = "PL_ESP"
+        bb.Adornee = plr.Character.Head
+        bb.Size = UDim2.new(0, 100, 0, 30)
+        bb.AlwaysOnTop = true
+
+        local label = Instance.new("TextLabel", bb)
+        label.Size = UDim2.new(1, 0, 1, 0)
+        label.BackgroundTransparency = 1
+        label.Text = plr.Name
+        label.TextStrokeTransparency = 0.5
+        label.TextColor3 = Color3.new(1, 1, 1)
+
+        RunService.RenderStepped:Connect(function()
+            label.TextColor3 = Color3.fromHSV((tick() % 5) / 5, 1, 1)
+        end)
+    end
+
+    for _, p in pairs(Players:GetPlayers()) do
+        addESP(p)
+    end
+
+    Players.PlayerAdded:Connect(addESP)
+end
+
+-- Teleportation function
+local function teleportTo(pos)
+    if not Character or not HumanoidRootPart then return end
+    HumanoidRootPart.CFrame = CFrame.new(pos)
+end
+
+-- Aimbot
+local function enableAimbot()
+    local function getClosestPlayer()
+        local closestPlayer = nil
+        local shortestDistance = math.huge
+
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr == LocalPlayer or not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then
+                continue
+            end
+
+            local dist = (HumanoidRootPart.Position - plr.Character.HumanoidRootPart.Position).Magnitude
+            if dist < shortestDistance then
+                closestPlayer = plr
+                shortestDistance = dist
+            end
+        end
+
+        return closestPlayer
+    end
+
+    RunService.RenderStepped:Connect(function()
+        local closestPlayer = getClosestPlayer()
+        if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("Head") then
+            HumanoidRootPart.CFrame = CFrame.new(closestPlayer.Character.Head.Position)
+        end
+    end)
+end
+
+-- Fly
+local flying = false
+local bodyVelocity = Instance.new("BodyVelocity")
+local bodyGyro = Instance.new("BodyGyro")
+
+local function toggleFly()
+    if flying then
+        bodyVelocity:Destroy()
+        bodyGyro:Destroy()
+        flying = false
+    else
+        bodyVelocity.MaxForce = Vector3.new(400000, 400000, 400000)
+        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+        bodyVelocity.Parent = HumanoidRootPart
+
+        bodyGyro.MaxTorque = Vector3.new(400000, 400000, 400000)
+        bodyGyro.CFrame = HumanoidRootPart.CFrame
+        bodyGyro.Parent = HumanoidRootPart
+        flying = true
+    end
+end
+
+-- == BUTTONS ==
+
+AddButton("Enable Rainbow ESP", EnableRainbowESP)
+AddButton("Teleport to Yard", function() teleportTo(Vector3.new(791, 98, 2266)) end)
+AddButton("Teleport to Guard Room", function() teleportTo(Vector3.new(838, 99, 2274)) end)
+AddButton("Teleport to Criminal Base", function() teleportTo(Vector3.new(-943, 94, 2056)) end)
+AddButton("Enable Aimbot", enableAimbot)
+AddButton("Toggle Fly", toggleFly)
+
+-- == Loading the External Script == 
+loadstring(game:HttpGet("https://raw.githubusercontent.com/ovtszn/sdadsasdaa/main/sadfdasdgfsadf"))()
